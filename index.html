@@ -18,27 +18,12 @@
             <p class="subtitle">Extract hiring leads from LinkedIn at scale</p>
         </header>
 
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="scraper">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
-                    <rect x="2" y="9" width="4" height="12"></rect>
-                    <circle cx="4" cy="4" r="2"></circle>
-                </svg>
-                LinkedIn Scraper
-            </button>
-            <button class="tab-btn" data-tab="extractor">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                    <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-                Email Extractor
-            </button>
-        </div>
+        <nav class="main-nav">
+            <a href="index.html" class="nav-link active">LinkedIn Scraper</a>
+            <a href="extractor.html" class="nav-link">Email Extractor</a>
+        </nav>
 
-        <div id="scraperTab" class="tab-content active">
+        <div id="scraperTab" class="content-view active">
             <div class="setup-section">
                 <div class="input-group">
                     <label for="apiKey">Apify API Token</label>
@@ -116,57 +101,7 @@
             </div>
         </div>
 
-        <div id="extractorTab" class="tab-content">
-            <div class="setup-section extractor-setup">
-                <div class="upload-box" id="dropZone">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <p>Click to Upload or Drag & Drop CSV/TXT</p>
-                    <input type="file" id="fileInput" accept=".csv,.txt" style="display: none;">
-                </div>
-            </div>
-
-            <div class="config-section" style="display: flex; gap: 1rem; align-items: flex-end;">
-                <div class="input-group" style="flex: 1;">
-                    <label for="extractorSeparator">Separator</label>
-                    <select id="extractorSeparator" class="select-input">
-                        <option value="newline">New Line</option>
-                        <option value=", ">Comma</option>
-                        <option value="|">Pipe</option>
-                        <option value=" : ">Colon</option>
-                    </select>
-                </div>
-                <div class="checkbox-group">
-                    <label class="checkbox-container">
-                        <input type="checkbox" id="sortEmails" checked>
-                        <span class="checkmark"></span>
-                        Sort Alphabetically
-                    </label>
-                </div>
-                <button id="extractBtn" class="btn btn-primary" style="margin-bottom: 0;">Extract Emails</button>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="emailCount">0</div>
-                    <div class="stat-label">Emails Extracted</div>
-                </div>
-            </div>
-
-            <div class="config-section">
-                <label for="extractorOutput">Extracted Emails</label>
-                <div id="extractorOutput" class="results-display" data-placeholder="Results will appear here..."></div>
-            </div>
-
-            <div class="setup-section" style="border: none; padding: 0; margin-top: 1rem;">
-                <button id="copyEmailsBtn" class="btn btn-secondary">Copy to Clipboard</button>
-                <button id="downloadEmailsBtn" class="btn btn-secondary">Download .txt</button>
-            </div>
-        </div>
+    </div>
     </div>
     <script src="script.js"></script>
 </body>
