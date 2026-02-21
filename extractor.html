@@ -115,9 +115,23 @@
                     </select>
                 </div>
 
-                <div class="checkbox-group" style="margin: 1rem 0;">
-                    <input type="checkbox" id="sortEmails" checked>
-                    <label for="sortEmails">Sort Alphabetically</label>
+                <div class="checkbox-group" style="margin: 1rem 0; display: flex; gap: 20px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="sortEmails" checked>
+                        <label for="sortEmails" style="margin-bottom: 0;">Sort Alphabetically</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="filterByDomain">
+                        <label for="filterByDomain" style="margin-bottom: 0;">Filter by Domain</label>
+                    </div>
+                </div>
+
+                <div id="domainFilterSection" style="display: none; margin-bottom: 2rem;">
+                    <label for="domainList">Allowed Domains (One per line or website URLs)</label>
+                    <textarea id="domainList" placeholder="example.com&#10;http://www.company.org/"
+                        style="height: 100px; font-size: 0.85rem; margin-top: 0.5rem;"></textarea>
+                    <p class="stats-label" style="margin-top: 0.5rem; font-size: 0.7rem;">Domains will be automatically
+                        extracted from URLs.</p>
                 </div>
 
                 <button id="extractBtn" class="btn btn-primary" style="width: 100%;">Refresh Results</button>

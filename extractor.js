@@ -7,11 +7,33 @@ const extractorOutput = document.getElementById('extractorOutput');
 const emailCountEl = document.getElementById('emailCount');
 const separatorSelect = document.getElementById('extractorSeparator');
 const sortCheckbox = document.getElementById('sortEmails');
+const filterByDomainCheckbox = document.getElementById('filterByDomain');
+const domainFilterSection = document.getElementById('domainFilterSection');
+const domainListInput = document.getElementById('domainList');
 const copyEmailsBtn = document.getElementById('copyEmailsBtn');
 const downloadEmailsBtn = document.getElementById('downloadEmailsBtn');
 const activityLogEl = document.getElementById('logEntries');
 
 let extractedEmails = [];
+let rawExtractedText = ""; // Store the full text for re-processing
+
+// Persistence & Domain Logic
+const savedDomains = localStorage.getItem('allowed_extractor_domains');
+if (savedDomains) domainListInput.value = savedDomains;
+
+const isFilterEnabled = localStorage.getItem('domain_filter_enabled') === 'true';
+filterByDomainCheckbox.checked = isFilterEnabled;
+domainFilterSection.style.display = isFilterEnabled ? 'block' : 'none';
+
+filterByDomainCheckbox.addEventListener('change', () => {
+    domainFilterSection.style.display = filterByDomainCheckbox.checked ? 'block' : 'none';
+    localStorage.setItem('domain_filter_enabled', filterByDomainCheckbox.checked);
+    updateExtractorUI();
+});
+
+domainListInput.addEventListener('input', () => {
+    localStorage.setItem('allowed_extractor_domains', domainListInput.value);
+});
 
 // Drag and Drop
 dropZone.addEventListener('click', () => fileInput.click());
@@ -45,8 +67,8 @@ function handleFile(file) {
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        const text = e.target.result;
-        processExtraction(text);
+        rawExtractedText = e.target.result;
+        processExtraction(rawExtractedText);
         addLogEntry(`Loaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
     };
     reader.readAsText(file);
@@ -58,23 +80,47 @@ function processExtraction(text) {
 
     // Deduplicate
     extractedEmails = [...new Set(matches.map(e => e.toLowerCase()))];
-
-    if (sortCheckbox.checked) {
-        extractedEmails.sort();
-    }
-
     updateExtractorUI();
 }
 
 extractBtn.addEventListener('click', () => {
     updateExtractorUI();
-    addLogEntry(`Re-processed list with ${separatorSelect.value} separator.`, 'success');
+    addLogEntry(`Re-processed list with current settings.`, 'success');
 });
 
 function updateExtractorUI() {
+    let listToDisplay = [...extractedEmails];
+
+    // Apply Domain Filtering
+    if (filterByDomainCheckbox.checked) {
+        const allowedDomains = domainListInput.value
+            .split('\n')
+            .map(line => {
+                let d = line.trim().toLowerCase();
+                try {
+                    if (d.startsWith('http')) {
+                        d = new URL(d).hostname;
+                    }
+                } catch (e) { }
+                return d.replace(/^www\./, '');
+            })
+            .filter(d => d.length > 0);
+
+        if (allowedDomains.length > 0) {
+            listToDisplay = listToDisplay.filter(email => {
+                const domain = email.split('@')[1].replace(/^www\./, '');
+                return allowedDomains.some(allowed => domain.includes(allowed) || allowed.includes(domain));
+            });
+        }
+    }
+
+    if (sortCheckbox.checked) {
+        listToDisplay.sort();
+    }
+
     let separator = separatorSelect.value === 'newline' ? '\n' : separatorSelect.value;
-    extractorOutput.innerText = extractedEmails.join(separator);
-    emailCountEl.innerText = extractedEmails.length;
+    extractorOutput.innerText = listToDisplay.join(separator);
+    emailCountEl.innerText = listToDisplay.length;
 }
 
 // Actions
