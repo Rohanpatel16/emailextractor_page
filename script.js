@@ -783,26 +783,29 @@ extractBtn.addEventListener('click', () => {
 
 function updateExtractorUI() {
     let separator = separatorSelect.value === 'newline' ? '\n' : separatorSelect.value;
-    extractorOutput.value = extractedEmails.join(separator);
+    extractorOutput.innerText = extractedEmails.join(separator);
     emailCountEl.innerText = extractedEmails.length;
 }
 
 // Actions
 copyEmailsBtn.addEventListener('click', () => {
     if (extractedEmails.length === 0) return;
-    extractorOutput.select();
-    document.execCommand('copy');
-    addLogEntry('System: Emails copied to clipboard!', 'success');
 
-    const originalText = copyEmailsBtn.innerText;
-    copyEmailsBtn.innerText = 'Copied!';
-    setTimeout(() => copyEmailsBtn.innerText = originalText, 2000);
+    // For div, use Selection API or navigator.clipboard directly
+    const text = extractorOutput.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        addLogEntry('System: Emails copied to clipboard!', 'success');
+
+        const originalText = copyEmailsBtn.innerText;
+        copyEmailsBtn.innerText = 'Copied!';
+        setTimeout(() => copyEmailsBtn.innerText = originalText, 2000);
+    });
 });
 
 downloadEmailsBtn.addEventListener('click', () => {
     if (extractedEmails.length === 0) return;
 
-    const content = extractorOutput.value;
+    const content = extractorOutput.innerText;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
