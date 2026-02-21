@@ -506,13 +506,29 @@ const defaultApifyInput = {
     scrapeReactions: false,
     sortBy: "relevance"
 };
-apifyInputEl.value = JSON.stringify(defaultApifyInput, null, 4);
+
+// Persistence Logic
+const savedApiKey = localStorage.getItem('apify_api_key');
+if (savedApiKey) apiKeyInput.value = savedApiKey;
+
+const savedInput = localStorage.getItem('apify_actor_input');
+if (savedInput) {
+    apifyInputEl.value = savedInput;
+} else {
+    apifyInputEl.value = JSON.stringify(defaultApifyInput, null, 4);
+}
+
+// Save on input
+apiKeyInput.addEventListener('input', () => {
+    localStorage.setItem('apify_api_key', apiKeyInput.value);
+});
 
 // Input Validation
 apifyInputEl.addEventListener('input', () => {
     try {
         JSON.parse(apifyInputEl.value);
         apifyInputEl.style.borderColor = 'var(--glass-border)';
+        localStorage.setItem('apify_actor_input', apifyInputEl.value);
     } catch (e) {
         apifyInputEl.style.borderColor = '#ff4b2b'; // Red for error
     }
