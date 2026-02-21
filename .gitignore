@@ -1,0 +1,8 @@
+.har
+*.csv
+Free Online Email Extractor.html
+Free Online Email Extractor_files/
+.gemini/
+.idea/
+.vscode/
+node_modules/
