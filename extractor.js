@@ -75,16 +75,21 @@ function handleFile(file) {
 }
 
 function processExtraction(text) {
-    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+    // regex that avoids capturing trailing dots/hyphens as part of the domain TLD
+    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
     const matches = text.match(emailRegex) || [];
 
-    // Clean and Deduplicate
+    // Aggressive Clean and Deduplicate
     const cleaned = matches.map(email => {
-        // Remove leading/trailing hyphens and dots
+        // Remove ANY number of leading/trailing dots, hyphens, or spaces
         return email.toLowerCase().trim().replace(/^[.-]+|[.-]+$/g, '');
     }).filter(email => {
-        // Basic validation after cleaning
-        return email.length > 5 && email.includes('@') && email.includes('.');
+        // Basic validation: must have @ and at least one dot in domain part, and not end with a dot
+        const parts = email.split('@');
+        return parts.length === 2 &&
+            parts[1].includes('.') &&
+            !email.endsWith('.') &&
+            email.length > 5;
     });
 
     extractedEmails = [...new Set(cleaned)];
