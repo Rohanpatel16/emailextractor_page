@@ -78,8 +78,16 @@ function processExtraction(text) {
     const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
     const matches = text.match(emailRegex) || [];
 
-    // Deduplicate
-    extractedEmails = [...new Set(matches.map(e => e.toLowerCase()))];
+    // Clean and Deduplicate
+    const cleaned = matches.map(email => {
+        // Remove leading/trailing hyphens and dots
+        return email.toLowerCase().trim().replace(/^[.-]+|[.-]+$/g, '');
+    }).filter(email => {
+        // Basic validation after cleaning
+        return email.length > 5 && email.includes('@') && email.includes('.');
+    });
+
+    extractedEmails = [...new Set(cleaned)];
     updateExtractorUI();
 }
 
