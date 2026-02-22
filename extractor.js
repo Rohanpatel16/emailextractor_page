@@ -16,6 +16,27 @@ const activityLogEl = document.getElementById('logEntries');
 
 let extractedEmails = [];
 let rawExtractedText = ""; // Store the full text for re-processing
+let extractorWorker = null;
+
+// Initialize Worker
+function initWorker() {
+    if (window.Worker) {
+        extractorWorker = new Worker('extractor-worker.js');
+        extractorWorker.onmessage = function (e) {
+            extractedEmails = e.data.emails;
+            hideLoading();
+            updateExtractorUI();
+            addLogEntry(`Processed ${extractedEmails.length} unique emails.`, 'success');
+        };
+        extractorWorker.onerror = function (err) {
+            console.error('Worker error:', err);
+            hideLoading();
+            addLogEntry('Error during processing.', 'error');
+        };
+    }
+}
+
+initWorker();
 
 // Persistence & Domain Logic
 const savedDomains = localStorage.getItem('allowed_extractor_domains');
@@ -65,84 +86,119 @@ function handleFile(file) {
         return;
     }
 
+    showLoading(`Reading ${file.name}...`);
     const reader = new FileReader();
     reader.onload = (e) => {
         rawExtractedText = e.target.result;
-        processExtraction(rawExtractedText);
         addLogEntry(`Loaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
+        startExtraction();
     };
     reader.readAsText(file);
 }
 
-function processExtraction(text) {
-    // regex that avoids capturing trailing dots/hyphens as part of the domain TLD
-    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
-    const matches = text.match(emailRegex) || [];
+function startExtraction() {
+    if (!rawExtractedText) return;
 
-    // Aggressive Clean and Deduplicate
-    const cleaned = matches.map(email => {
-        // Remove ANY number of leading/trailing dots, hyphens, or spaces
-        return email.toLowerCase().trim().replace(/^[.-]+|[.-]+$/g, '');
-    }).filter(email => {
-        // Basic validation: must have @ and at least one dot in domain part, and not end with a dot
-        const parts = email.split('@');
-        return parts.length === 2 &&
-            parts[1].includes('.') &&
-            !email.endsWith('.') &&
-            email.length > 5;
-    });
+    showLoading('Extracting emails...');
 
-    extractedEmails = [...new Set(cleaned)];
-    updateExtractorUI();
-}
-
-extractBtn.addEventListener('click', () => {
-    updateExtractorUI();
-    addLogEntry(`Re-processed list with current settings.`, 'success');
-});
-
-function updateExtractorUI() {
-    let listToDisplay = [...extractedEmails];
-
-    // Apply Domain Filtering
-    if (filterByDomainCheckbox.checked) {
-        const allowedDomains = domainListInput.value
+    const settings = {
+        filterEnabled: filterByDomainCheckbox.checked,
+        allowedDomains: domainListInput.value
             .split('\n')
             .map(line => {
                 let d = line.trim().toLowerCase();
                 try {
-                    if (d.startsWith('http')) {
-                        d = new URL(d).hostname;
-                    }
+                    if (d.startsWith('http')) d = new URL(d).hostname;
                 } catch (e) { }
                 return d.replace(/^www\./, '');
             })
-            .filter(d => d.length > 0);
+            .filter(d => d.length > 0),
+        sortEnabled: sortCheckbox.checked
+    };
 
-        if (allowedDomains.length > 0) {
-            listToDisplay = listToDisplay.filter(email => {
-                const domain = email.split('@')[1].replace(/^www\./, '');
-                return allowedDomains.some(allowed => domain.includes(allowed) || allowed.includes(domain));
-            });
-        }
+    if (extractorWorker) {
+        extractorWorker.postMessage({ text: rawExtractedText, settings });
+    } else {
+        // Fallback to synchronous if worker fails to init (unlikely)
+        processExtractionSync(rawExtractedText, settings);
+    }
+}
+
+function processExtractionSync(text, settings) {
+    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+    const matches = text.match(emailRegex) || [];
+
+    const cleaned = matches.map(email => {
+        return email.toLowerCase().trim().replace(/^[.-]+|[.-]+$/g, '');
+    }).filter(email => {
+        const parts = email.split('@');
+        return parts.length === 2 && parts[1].includes('.') && !email.endsWith('.') && email.length > 5;
+    });
+
+    extractedEmails = [...new Set(cleaned)];
+
+    if (settings.filterEnabled && settings.allowedDomains.length > 0) {
+        extractedEmails = extractedEmails.filter(email => {
+            const domain = email.split('@')[1].replace(/^www\./, '');
+            return settings.allowedDomains.some(allowed => domain.includes(allowed) || allowed.includes(domain));
+        });
     }
 
-    if (sortCheckbox.checked) {
-        listToDisplay.sort();
+    if (settings.sortEnabled) extractedEmails.sort();
+
+    hideLoading();
+    updateExtractorUI();
+}
+
+extractBtn.addEventListener('click', () => {
+    if (!rawExtractedText) {
+        addLogEntry('No data to process. Please upload a file first.', 'error');
+        return;
+    }
+    startExtraction();
+    addLogEntry(`Re-processing list with current settings...`, 'info');
+});
+
+function updateExtractorUI() {
+    const listToDisplay = extractedEmails;
+    const separator = separatorSelect.value === 'newline' ? '\n' : separatorSelect.value;
+
+    // UI Optimization: Only render the first 1000 emails in the preview
+    // This prevents the browser from freezing due to DOM overload.
+    const displayLimit = 1000;
+    const truncated = listToDisplay.slice(0, displayLimit);
+
+    extractorOutput.innerText = truncated.join(separator);
+
+    if (listToDisplay.length > displayLimit) {
+        extractorOutput.innerText += `\n\n... and ${listToDisplay.length - displayLimit} more. (Full list available for copy/download)`;
+        extractorOutput.style.color = '#ffcc00'; // Warning color if truncated
+    } else {
+        extractorOutput.style.color = '#00ff41'; // Normal color
     }
 
-    let separator = separatorSelect.value === 'newline' ? '\n' : separatorSelect.value;
-    extractorOutput.innerText = listToDisplay.join(separator);
     emailCountEl.innerText = listToDisplay.length;
+}
+
+function showLoading(message) {
+    extractBtn.disabled = true;
+    extractBtn.innerHTML = `<span class="spinner"></span> ${message}`;
+}
+
+function hideLoading() {
+    extractBtn.disabled = false;
+    extractBtn.innerText = 'Refresh Results';
 }
 
 // Actions
 copyEmailsBtn.addEventListener('click', () => {
     if (extractedEmails.length === 0) return;
 
-    const text = extractorOutput.innerText;
+    const separator = separatorSelect.value === 'newline' ? '\n' : separatorSelect.value;
+    const text = extractedEmails.join(separator);
+
     navigator.clipboard.writeText(text).then(() => {
-        addLogEntry('Emails copied to clipboard!', 'success');
+        addLogEntry(`Copied ${extractedEmails.length} emails to clipboard!`, 'success');
 
         const originalText = copyEmailsBtn.innerText;
         copyEmailsBtn.innerText = 'Copied!';
@@ -153,7 +209,8 @@ copyEmailsBtn.addEventListener('click', () => {
 downloadEmailsBtn.addEventListener('click', () => {
     if (extractedEmails.length === 0) return;
 
-    const content = extractorOutput.innerText;
+    const separator = separatorSelect.value === 'newline' ? '\n' : separatorSelect.value;
+    const content = extractedEmails.join(separator);
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
